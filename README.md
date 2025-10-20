@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Thiệp 20/10 — Premium Edition</title>
+<style>
+  /* ========== Reset & base ========== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html,body { height: 100%; }
+  body
+
+   {
+    font-family: "Poppins", "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 10% 10%, rgba(255,255,255,0.06), transparent 10%),
+                linear-gradient(135deg,#f6d6ff 0%, #e5f0ff 40%, #ffd6e8 100%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#222;
+  }
+
+  /* subtle animated shimmer background */
+  .bg-anim {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(120deg, rgba(255,255,255,0.03), rgba(255,255,255,0.0)),
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><g opacity="0.07" fill="%23ffffff"><circle cx="50" cy="50" r="40"/><circle cx="750" cy="100" r="60"/><circle cx="400" cy="520" r="100"/></g></svg>');
+    background-size: cover;
+    animation: bgmove 18s linear infinite;
+    filter: blur(8px) contrast(1.02);
+    transform: scale(1.05);
+    opacity: 0.95;
+  }
+  @keyframes bgmove { 0%{transform:translateY(0) scale(1.05)}50%{transform:translateY(-30px) scale(1.06)}100%{transform:translateY(0) scale(1.05)} }
+
+  /* central scene */
+  .stage {
+    position: relative;
+    width: min(1000px, 96vw);
+    height: min(700px, 86vh);
+    display: grid;
+    place-items: center;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* popup dialog */
+  .dialog {
+    pointer-events: auto;
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,250,255,0.95));
+    border-radius: 22px;
+    padding: 28px 32px;
+    box-shadow: 0 18px 50px rgba(120,30,120,0.18);
+    width: min(640px, 92%);
+    text-align: center;
+    transform: translateZ(0);
+  }
+  .dialog h1 {
+    font-size: 28px;
+    color:#6b0f6b;
+    margin-bottom: 8px;
+    letter-spacing: 0.6px;
+  }
+  .dialog p { color:#444; margin-bottom:14px; font-size:16px; }
+
+  .actions {
+    position: relative;
+    height: 56px;
+  }
+  .btn {
+    pointer-events: auto;
+    display:inline-block;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-weight:600;
+    cursor: pointer;
+    border: none;
+    font-size:16px;
+    user-select:none;
+    transition: transform .18s ease, box-shadow .18s ease;
+    box-shadow: 0 8px 22px rgba(120,30,120,0.08);
+  }
+  #yes {
+    background: linear-gradient(90deg,#ff95d6,#ff7fc7);
+    color: #fff;
+    margin-right: 18px;
+  }
+  #no {
+    background: linear-gradient(90deg,#9be7ff,#bfe8ff);
+    color:#083047;
+    position: absolute;
+    left: calc(50% + 40px);
+    top: 0;
+  }
+  .btn:active { transform: translateY(2px) scale(.995); }
+
+  /* card - 3D open */
+  .card-wrap {
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 560px;
+    max-width: 90%;
+    perspective: 1600px;
+    z-index: 5;
+  }
+  .card {
+    width:100%;
+    border-radius:18px;
+    transform-style: preserve-3d;
+    transform-origin: top center;
+    transform: rotateX(18deg) scale(.92);
+    transition: transform .9s cubic-bezier(.2,.9,.2,1), opacity .6s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .card.open {
+    opacity:1;
+    transform: rotateX(0deg) scale(1);
+    pointer-events: auto;
+  }
+  .card-inner {
+    background: linear-gradient(135deg,#fff 0%, #fff8ff 100%);
+    border-radius: 18px;
+    padding: 34px;
+    box-shadow: 0 28px 60px rgba(100,10,80,0.18);
+    text-align:center;
+  }
+  .card h2 { color:#8b007a; font-size:26px; margin-bottom:6px; }
+  .card .message { color:#333; font-size:17px; line-height:1.45; min-height:58px; }
+
+  /* decorative & helpers */
+  #musicToggle {
+    position: fixed;
+    right: 18px;
+    top: 18px;
+    z-index:7;
+    pointer-events: auto;
+    background: rgba(255,255,255,0.9);
+    border-radius: 999px;
+    padding: 10px 12px;
+    box-shadow: 0 6px 20px rgba(90,30,90,0.12);
+    cursor: pointer;
+    font-weight:700;
+  }
+
+  /* hearts */
+  .heart {
+    position: fixed;
+    z-index: 2;
+    font-size: 22px;
+    pointer-events: none;
+    transform-origin:center;
+    will-change: transform, opacity;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  }
+
+  /* confetti placeholder */
+  #canvasEffects { position: fixed; inset:0; z-index:1; pointer-events: none; }
+
+  /* small responsive tweaks */
+  @media (max-width:640px){
+    .dialog h1 { font-size:20px; }
+    .btn { font-size:14px; padding:10px 16px; }
+    .card-wrap { width: 92%; }
+  }
+</style>
+</head>
+<body>
+
+
+
+  <div class="bg-anim" aria-hidden="true"></div>
+
+  <div id="canvasEffects">
+    <canvas id="effectsCanvas"></canvas>
+  </div>
+
+  <div class="stage" role="main" aria-label="Thiệp 20/10 hoành tráng">
+    <div class="dialog" id="dialog" aria-live="polite">
+      <h1>💐 Bạn có muốn nhận thiệp 20/10 đặc biệt không?</h1>
+      <p>Nhấn <strong>Đồng ý</strong> để mở thiệp — nếu bấm <em>Từ chối</em> thì nó sẽ... chạy trốn 😏</p>
+      <div class="actions">
+        <button id="yes" class="btn">Đồng ý 💖</button>
+        <button id="no" class="btn">Từ chối 😅</button>
+      </div>
+    </div>
+
+    <div class="card-wrap" aria-hidden="true">
+      <div class="card" id="card">
+        <div class="card-inner">
+          <h2>💌 Gửi đến người con gái đặc biệt</h2>
+          <div class="message" id="message"></div>
+          <div style="margin-top:18px; font-size:14px; color:#6a456a">— Chúc em 20/10 luôn rạng rỡ & yêu đời 🌸</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="musicToggle" aria-pressed="false">🎵</button>
+  <audio id="bgMusic" loop preload="auto">
+    <source src="baihat.mp3" type="audio/mpeg">
+    <!-- fallback -->
+  </audio>
+
+<script>
+/* =========================
+   Main interactive behavior
+   ========================= */
+
+const yesBtn = document.getElementById('yes');
+const noBtn  = document.getElementById('no');
+const dialog = document.getElementById('dialog');
+const card   = document.getElementById('card');
+const cardWrap = document.querySelector('.card-wrap');
+const msgEl  = document.getElementById('message');
+const music = document.getElementById('bgMusic');
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+document.body.appendChild(tag);
+const musicToggle = document.getElementById('musicToggle');
+
+let heartsInterval = null;
+let confettiActive = false;
+
+/* ---------- Reject button: chạy loạn + né khi click ---------- */
+function moveNoRandomly(extraDistance=30) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const btnW = noBtn.offsetWidth;
+  const btnH = noBtn.offsetHeight;
+  // choose a random position but within visible area and away from center dialog
+  let x = Math.random() * (vw - btnW - 20);
+  let y = Math.random() * (vh - btnH - 20);
+  // ensure not overlapping the yes button area (approx center)
+  const rectYes = yesBtn.getBoundingClientRect();
+  if (Math.abs(x - rectYes.left) < 160) x = (rectYes.left + 200) % (vw - btnW);
+  noBtn.style.left = x + 'px';
+  noBtn.style.top = y + 'px';
+}
+noBtn.style.position = 'absolute';
+noBtn.style.left = '60%';
+noBtn.style.top = '0px';
+
+// Move on mouseover and on click
+noBtn.addEventListener('mouseover', () => moveNoRandomly());
+noBtn.addEventListener('click', (e) => {
+  // teleport further if user tries to click
+  moveNoRandomly(120);
+  e.preventDefault();
+});
+
+/* ---------- Accept button: mở thiệp + khởi hiệu ứng ---------- */
+yesBtn.addEventListener('click', () => {
+  // hide dialog & show card with 3d open
+  dialog.style.transition = 'transform .6s ease, opacity .6s ease';
+  dialog.style.transform = 'translateY(30px) scale(.98)';
+  dialog.style.opacity = '0';
+  setTimeout(()=> dialog.style.display = 'none', 500);
+
+  // show card
+  card.classList.add('open');
+
+  // start hearts, confetti, fireworks
+  startHearts();
+  startConfetti();
+  startFireworksBurst();
+
+  // typewriter message
+  const lines = [
+    "Chúc em một ngày 20/10 thật xinh tươi, luôn mạnh khỏe và tràn đầy yêu thương.",
+    "Mong mọi điều tốt đẹp sẽ đến với em, hôm nay và mọi ngày.",
+    "Cảm ơn em vì những nụ cười, sự ấm áp và ánh sáng em mang đến.",
+    "Em như hương gió ban mai",
+    "Làm anh quên hết u hoài ngày qua.",
+    "Hai mươi tháng mười nở hoa,",
+    "Anh mang tim nhỏ gửi ra vườn hồng.",
+    "Và cũng thật xin lỗi vì ngày 20/10 này anh không thể ở bên dành tặng cho em những điều tốt đẹp nhất,",
+    "Anh xin lỗi em iu dấu của anh vì đã để em chịu thiệt thòi rồi...",
+    "Nhưng anh yêu em nhiều lắm XD! 😘💖"
+  ];
+  typeWriter(lines, msgEl, 40);
+});
+
+/* ---------- Typewriter ---------- */
+function typeWriter(lines, target, speed=50) {
+  target.innerHTML = '';
+  let lineIndex = 0, charIndex = 0;
+  function step() {
+    if (lineIndex >= lines.length) return;
+    const line = lines[lineIndex];
+    if (charIndex <= line.length) {
+      target.innerHTML = lines.slice(0,lineIndex).map(l=>`<div>${escapeHtml(l)}</div>`).join('') +
+                         `<div>${escapeHtml(line.slice(0,charIndex))}<span class="cursor">▌</span></div>`;
+      charIndex++;
+      setTimeout(step, speed);
+    } else {
+      charIndex = 0;
+      lineIndex++;
+      setTimeout(step, 450);
+    }
+  }
+  step();
+}
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- Music control ---------- */
+musicToggle.addEventListener('click', () => {
+  if (music.paused) {
+    music.play().catch(()=>{}); // may be blocked if auto-play policy; user can click again
+    musicToggle.textContent = '🔊';
+    musicToggle.setAttribute('aria-pressed','true');
+  } else {
+    music.pause();
+    musicToggle.textContent = '🎵';
+    musicToggle.setAttribute('aria-pressed','false');
+  }
+});
+
+// try to autoplay softly (some browsers block). We leave it to user control if blocked.
+setTimeout(()=> {
+  music.volume = 0.05;
+  const p = music.play();
+  if (p !== undefined) {
+    p.then(()=> music.pause()).catch(()=>{/*ignore*/});
+  }
+}, 600);
+
+/* =========================
+   Canvas effects: confetti, hearts, fireworks
+   ========================= */
+
+const canvas = document.getElementById('effectsCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let particles = [];
+function rand(min,max){ return Math.random()*(max-min)+min; }
+
+class Particle {
+  constructor(x,y, vx, vy, life, size, color, type='confetti') {
+    this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.life=life; this.size=size; this.color=color; this.type=type; this.age=0;
+  }
+  update(dt){
+    this.age += dt;
+    this.x += this.vx*dt;
+    this.y += this.vy*dt;
+    if (this.type === 'confetti') this.vy += 30*dt; // gravity
+    else if (this.type === 'heart') { this.vy -= 6*dt; this.vx += Math.sin(this.age*6)*6*dt; }
+    this.vx *= 0.999;
+  }
+  draw(ctx){
+    ctx.save();
+    if (this.type === 'confetti') {
+      ctx.translate(this.x, this.y);
+      ctx.rotate((this.age*10) % (Math.PI*2));
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size*0.6);
+    } else if (this.type === 'spark') {
+      ctx.beginPath();
+      ctx.globalAlpha = Math.max(0,1 - this.age/this.life);
+      ctx.fillStyle = this.color;
+      ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (this.type === 'heart') {
+      ctx.font = `${this.size}px serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('💖', this.x, this.y);
+    }
+    ctx.restore();
+  }
+}
+
+let lastTime = 0;
+function animate(now=0){
+  const dt = Math.min(0.03,(now-lastTime)/1000);
+  lastTime = now;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // update particles
+  for (let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.update(dt);
+    p.draw(ctx);
+    if (p.age > p.life) particles.splice(i,1);
+  }
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+/* ---------- Confetti control ---------- */
+function startConfetti(){
+  if (confettiActive) return;
+  confettiActive = true;
+  // spawn many confetti for a while
+  const duration = 3500;
+  const end = performance.now()+duration;
+  (function spawn(){
+    if (performance.now() > end) return;
+    for (let i=0;i<12;i++){
+      const x = rand(0,canvas.width);
+      const y = -20;
+      const vx = rand(-80,80);
+      const vy = rand(30,160);
+      const size = rand(6,14);
+      const colors = ['#ff7fc7','#ffd27a','#9be7ff','#bfe8ff','#c7a7ff'];
+      particles.push(new Particle(x,y,vx,vy, rand(2.2,4.0), size, colors[Math.floor(rand(0,colors.length))], 'confetti'));
+    }
+    setTimeout(spawn, 120);
+  })();
+}
+
+/* ---------- Hearts floating (DOM) ---------- */
+function startHearts(){
+  if (heartsInterval) return;
+  heartsInterval = setInterval(()=> {
+    const heart = document.createElement('div');
+    heart.className = 'heart';
+    heart.innerText = '💖';
+    const size = rand(18,42);
+    heart.style.fontSize = size + 'px';
+    heart.style.left = rand(6,94)+'%';
+    heart.style.bottom = '-30px';
+    heart.style.opacity = '0.9';
+    document.body.appendChild(heart);
+    const dur = rand(3800,6500);
+    const r = rand(-20,20);
+    heart.animate([
+      { transform: `translateY(0) rotate(${r}deg)`, opacity:1 },
+      { transform: `translateY(-${window.innerHeight + 60}px) rotate(${r+60}deg)`, opacity:0 }
+    ], { duration: dur, easing: 'cubic-bezier(.2,.9,.2,1)' });
+    setTimeout(()=> heart.remove(), dur+120);
+  }, 220);
+}
+
+/* ---------- Fireworks bursts (canvas small spark particles) ---------- */
+function startFireworksBurst(){
+  // create several bursts from center-top area
+  const centerX = canvas.width/2;
+  const topY = canvas.height * 0.28;
+  for (let b=0;b<8;b++){
+    setTimeout(()=> createBurst(rand(centerX-220, centerX+220), topY, rand(28,60)), b*240);
+  }
+}
+function createBurst(x,y,count){
+  for (let i=0;i<count;i++){
+    const angle = rand(0, Math.PI*2);
+    const speed = rand(60,260);
+    const vx = Math.cos(angle)*speed;
+    const vy = Math.sin(angle)*speed;
+    const color = `hsl(${rand(0,360)}, 90%, ${rand(50,65)}%)`;
+    particles.push(new Particle(x,y,vx,vy, rand(0.9,1.8), rand(2,4), color, 'spark'));
+  }
+}
+
+/* ---------- Utility: small fireworks while idle (gentle) ---------- */
+setInterval(()=> {
+  if (!card.classList.contains('open')) return;
+  if (Math.random() < 0.35) {
+    createBurst(rand(100, canvas.width-100), rand(100, canvas.height/2), rand(18,40));
+  }
+}, 900);
+
+/* ---------- initial playful no-button jitter to invite interaction ---------- */
+setInterval(()=> {
+  if (dialog.style.display === 'none') return;
+  // lightly nudge no-btn to make it lively
+  noBtn.animate([
+    { transform: 'translateY(0)' },
+    { transform: 'translateY(-6px)' },
+    { transform: 'translateY(0)' }
+  ], { duration: 1400, iterations: 1, easing: 'ease-in-out' });
+}, 2600);
+
+/* ---------- Accessibility: keyboard activate yes/no ---------- */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') yesBtn.click();
+  if (e.key.toLowerCase() === 'n') { moveNoRandomly(); }
+});
+
+/* ---------- Make sure no-button isn't trapped under small screens: keep it visible ---------- */
+window.addEventListener('resize', ()=> {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const rect = noBtn.getBoundingClientRect();
+  if (rect.left + rect.width > vw - 10) noBtn.style.left = (vw - rect.width - 14) + 'px';
+  if (rect.top + rect.height > vh - 10) noBtn.style.top = (vh - rect.height - 14) + 'px';
+});
+
+/* ---------- small polite hint: on first user move, slightly nudge reject to be playful ---------- */
+let firstMove = true;
+window.addEventListener('mousemove', () => {
+  if (!firstMove) return;
+  firstMove = false;
+  setTimeout(()=> moveNoRandomly(), 120);
+});
+
+/* ========== End of script ========== */
+</script>
+</body>
+</html>
